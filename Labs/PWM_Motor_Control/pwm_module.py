@@ -14,11 +14,11 @@ motor.duty_u16(32768) # 0-65535 for duty cycle range 0-100
 
 # YOUR CODE HERE
 
-# duty_cycle = 0.6 # set duty cycle
+duty_cycle = 0.85 # set duty cycle
 
 while True:
-    duty_cycle = float(tty.readline()) # read duty cycle value from the serial port
-    print(duty_cycle) # print out read duty cycle
+#     duty_cycle = float(tty.readline()) # read duty cycle value from the serial port
+#     print(duty_cycle) # print out read duty cycle
     convert_dc = int(duty_cycle * 65535) # convert duty cycle to an integer 0 to 65535
     motor.duty_u16(convert_dc) # set motor pin to new duty cycle
     if duty_cycle == -1: # terminate loop if input read from serial port is -1
