@@ -4,13 +4,13 @@ from machine import Pin, ADC
 sensor = ADC(Pin(26)) # create ADC object for Pin 26
 
 # conversion constants
-c = 1.279819225707028e-08
-e = -0.001088443757007
-f = 26.564959148404913
+c = 1.474479111075166e-08
+e = -0.001134635853031
+f = 25.093091714162838
 
 # convert ADC voltage to hole number
 def calc_hole(voltage):
-    return c*(voltage^2) + e*voltage + f
+    return c*(voltage**2) + e*voltage + f
 
 # convert hole number to height in cm
 def calc_height(hole):

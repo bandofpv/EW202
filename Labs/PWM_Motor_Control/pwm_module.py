@@ -14,7 +14,7 @@ motor.duty_u16(32768) # 0-65535 for duty cycle range 0-100
 
 # YOUR CODE HERE
 
-duty_cycle = 0.85 # set duty cycle
+duty_cycle = 0.70 # set duty cycle
 
 while True:
 #     duty_cycle = float(tty.readline()) # read duty cycle value from the serial port

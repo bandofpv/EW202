@@ -3,15 +3,13 @@ import time
 from machine import Pin, ADC, PWM
 
 # conversion constants
-# a = 0.206432038834951
-# b = 5.156067961165052
-a = 0.189851688407121
-b = 5.459128681940197
-c = 1.279819225707028e-08
-e = -0.001088443757007
-f = 26.564959148404913
+a = 0.194973929191975
+b = 5.476683526403699
+c = 1.671309760049691e-08
+e = -0.001250544661994
+f = 26.752710878503745
 
-dV = 0.3 # incremental voltage
+kp = 0.09 # proportional gain
 
 tty = ttyacm.open(1) # open data port
 
@@ -29,11 +27,6 @@ def sample_sensor():
     val2 = sensor.read_u16()
     return min([val0,val1,val2])
 
-# calculate height given ADC voltage
-def calc_height(voltage):
-    hole = c*(voltage^2) + e*voltage + f # calculate hole given ADC voltage
-    return (14-hole)*2
-
 # calculate baseline voltage given linear fit line
 def calc_vb(height):
     return a * height + b
@@ -41,6 +34,11 @@ def calc_vb(height):
 # calculate duty cycle given fan voltage
 def calc_dc(voltage):
     return int(65535 * (voltage/12)) # assume 12V supply voltage
+
+# calculate height given ADC voltage
+def calc_height(voltage):
+    hole = c*(voltage**2) + e*voltage + f # calculate hole given ADC voltage
+    return (14-hole)*2
 
 while True:
     print("Waiting on MATLAB desired height")
@@ -52,29 +50,36 @@ while True:
     print("Waiting on MATLAB number of samples")
     samples = int(tty.readline()) # receive MATLAB message to collect number of samples via serial
     
+    start = False # initialize  flag
+    
+    while not start:
+        voltage = sample_sensor() # take a voltage reading
+        height = calc_height(voltage) # convert voltage reading to height
+        
+        start = True if height > desired_height else False # keep looping until ball reaches desired height
+    
     # loop for through every sample
     for i in range(samples):
         voltage = sample_sensor() # take a voltage reading
         height = calc_height(voltage) # convert voltage reading to height
         tty.print(height) # send distance to MATLAB via serial
         
-        error = height - desired_height # calculate error
+        error = desired_height - height # calculate error
         
-        # if ball is below desired height, increase fan voltage 
-        if error < 0:
-            fan_v = vb + dV # incerase by incremental voltage
-            print(f"increase H: {height} V: {fan_v}")
-            
-        # if ball is above desired height, decrease fan voltage
-        else:
-            fan_v = vb - dV # decease by incremental voltage
-            print(f"decrease H: {height} V: {fan_v}")
+        fan_v = vb + kp * error # update fan voltage with incremental voltage
         
-        fan_v = 12 if fan_v > 12 else fan_v # max fan_v to 12 volts 
+        print(fan_v, error)
+        
+        fan_v = 12 if fan_v > 12 else fan_v # max fan_v to 12 volts
+        fan_v = 12 * 0.4 if fan_v < 12 * 0.4 else fan_v # min fan_v to 12 * 0.4 volts
             
         motor.duty_u16(calc_dc(fan_v)) # turn motor to fan_v
+        
+        tty.print(fan_v) # send fan voltage to MATLAB via serial
         
         time.sleep(0.02) # sampling period 0.02 seconds
     
     motor.duty_u16(0) # turn off motor when done
     print("Done")
+
+
