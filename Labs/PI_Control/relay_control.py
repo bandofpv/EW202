@@ -3,11 +3,13 @@ import time
 from machine import Pin, ADC, PWM
 
 # conversion constants
-c = 1.474479111075166e-08
-e = -0.001134635853031
-f = 25.093091714162838
+a = 0.247957893207598
+b = 5.729593846255561
+c = 1.246156257391686e-08
+e = -0.001021188865621
+f = 24.317200852875370
 
-dV = 1 # incremental voltage
+dV = 0.3 # incremental voltage
 
 tty = ttyacm.open(1) # open data port
 
@@ -25,6 +27,10 @@ def sample_sensor():
     val2 = sensor.read_u16()
     return min([val0,val1,val2])
 
+# calculate baseline voltage given linear fit line
+def calc_vb(height):
+    return a * height + b
+
 # calculate duty cycle given fan voltage
 def calc_dc(voltage):
     return int(65535 * (voltage/12)) # assume 12V supply voltage
@@ -37,26 +43,17 @@ def calc_height(voltage):
 while True:
     print("Waiting on MATLAB desired height")
     desired_height = int(tty.readline()) # recieve MATLAB message for desired height
-    vb = 6 # base voltage
+    vb = 8 # base voltage
     fan_v = vb # set fan voltage to base voltage
     motor.duty_u16(calc_dc(fan_v)) # turn motor to fan voltage
     
     print("Waiting on MATLAB number of samples")
     samples = int(tty.readline()) # receive MATLAB message to collect number of samples via serial
     
-    start = False # initialize  flag
-    
-    while not start:
-        voltage = sample_sensor() # take a voltage reading
-        height = calc_height(voltage) # convert voltage reading to height
-        
-        start = True if height > desired_height else False # keep looping until ball reaches desired height
-    
     # loop for through every sample
     for i in range(samples):
         voltage = sample_sensor() # take a voltage reading
         height = calc_height(voltage) # convert voltage reading to height
-        tty.print(height) # send distance to MATLAB via serial
         
         error = height - desired_height # calculate error
         
@@ -74,6 +71,8 @@ while True:
             
         motor.duty_u16(calc_dc(fan_v)) # turn motor to fan_v
         
+        tty.print(height) # send distance to MATLAB via serial
+        tty.print(fan_v) # send fan voltage to MATLAB via serial
         time.sleep(0.02) # sampling period 0.02 seconds
     
     motor.duty_u16(0) # turn off motor when done

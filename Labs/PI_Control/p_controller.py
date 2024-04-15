@@ -3,9 +3,9 @@ import time
 from machine import Pin, ADC, PWM
 
 # conversion constants
-c = 1.671309760049691e-08
-e = -0.001250544661994
-f = 26.752710878503745
+c = 1.246156257391686e-08
+e = -0.001021188865621
+f = 24.317200852875370
 
 kp = 0.09 # proportional gain
 
@@ -44,33 +44,30 @@ while True:
     print("Waiting on MATLAB number of samples")
     samples = int(tty.readline()) # receive MATLAB message to collect number of samples via serial
     
-    start = False # initialize  flag
-    
-    while not start:
-        voltage = sample_sensor() # take a voltage reading
-        height = calc_height(voltage) # convert voltage reading to height
-        
-        start = True if height > desired_height else False # keep looping until ball reaches desired height
+    start = True
     
     # loop for through every sample
     for i in range(samples):
         voltage = sample_sensor() # take a voltage reading
         height = calc_height(voltage) # convert voltage reading to height
-        tty.print(height) # send distance to MATLAB via serial
         
         error = desired_height - height # calculate error
         
-        fan_v = vb + kp * error # update fan voltage with incremental voltage
-        print(fan_v, error)
+        if height > desired_height: start = True # start controlling once height reaches desired height
+
+        if start:
+            fan_v = vb + kp * error # update fan voltage with incremental voltage
         
         fan_v = 12 if fan_v > 12 else fan_v # max fan_v to 12 volts
         fan_v = 12 * 0.4 if fan_v < 12 * 0.4 else fan_v # min fan_v to 12 * 0.4 volts
             
         motor.duty_u16(calc_dc(fan_v)) # turn motor to fan_v
         
+        tty.print(height) # send height to MATLAB via serial
         tty.print(fan_v) # send fan voltage to MATLAB via serial
         
         time.sleep(0.02) # sampling period 0.02 seconds
+        print(error, fan_v)
     
     motor.duty_u16(0) # turn off motor when done
     print("Done")

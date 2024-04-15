@@ -2,9 +2,9 @@ from machine import Pin, PWM, ADC
 import time
 
 # conversion constants
-c = 1.671309760049691e-08
-e = -0.001250544661994
-f = 26.752710878503745
+c = 1.246156257391686e-08
+e = -0.001021188865621
+f = 24.317200852875370
 
 sensor = ADC(Pin(26)) # create ADC object for Pin 26
 motor = PWM(Pin(16)) # DC motor control from GPIO16
@@ -25,7 +25,7 @@ def calc_height(voltage):
     hole = c*(voltage**2) + e*voltage + f # calculate hole given ADC voltage
     return (14-hole)*2
 
-duty_cycle = 0.50 # set duty cycle
+duty_cycle = 0.75 # set duty cycle
 convert_dc = int(duty_cycle * 65535) # convert duty cycle to an integer 0 to 65535
 motor.duty_u16(convert_dc) # set motor pin to new duty cycle
 
